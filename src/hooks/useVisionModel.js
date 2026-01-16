@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react"; // ADD THIS LINE
 import * as cocoSsd from "@tensorflow-models/coco-ssd";
 import * as tf from "@tensorflow/tfjs";
 
@@ -9,13 +10,12 @@ export const useVisionModel = () => {
     const load = async () => {
       await tf.ready();
       
-      // OPTIMIZATION 1: Try loading from browser cache first
       try {
         const cachedModel = await tf.loadGraphModel('indexeddb://coco-ssd-model');
         setModel(cachedModel);
         setIsReady(true);
       } catch (e) {
-        // OPTIMIZATION 2: Use the "lite" version for speed
+        // Defaults to 'lite_mobilenet_v2' for speed if no cache exists
         const instance = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
         
         // Save to cache for next time
