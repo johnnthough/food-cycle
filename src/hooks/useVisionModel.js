@@ -1,6 +1,5 @@
-import { useState, useEffect } from "react"; // ADD THIS LINE
-import * as cocoSsd from "@tensorflow-models/coco-ssd";
-import * as tf from "@tensorflow/tfjs";
+import { useState, useEffect } from "react";
+import { roboflow } from "roboflow";
 
 export const useVisionModel = () => {
   const [model, setModel] = useState(null);
@@ -8,21 +7,20 @@ export const useVisionModel = () => {
 
   useEffect(() => {
     const load = async () => {
-      await tf.ready();
+      // 1. Authenticate with your VITE_ prefixed key
+      const rf = roboflow(import.meta.env.VITE_ROBOFLOW_API_KEY); 
       
       try {
-        const cachedModel = await tf.loadGraphModel('indexeddb://coco-ssd-model');
-        setModel(cachedModel);
-        setIsReady(true);
-      } catch (e) {
-        // Defaults to 'lite_mobilenet_v2' for speed if no cache exists
-        const instance = await cocoSsd.load({ base: 'lite_mobilenet_v2' });
-        
-        // Save to cache for next time
-        await instance.model.save('indexeddb://coco-ssd-model');
+        // 2. Load the specific dataset from your screenshot
+        const instance = await rf
+          .workspace("wei-tq4ff") 
+          .project("grocery-detection-vud86") 
+          .version(1); // Check the 'Deploy' tab in Roboflow for version updates
         
         setModel(instance);
         setIsReady(true);
+      } catch (error) {
+        console.error("Failed to load Grocery model:", error);
       }
     };
     load();
