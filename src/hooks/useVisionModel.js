@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { roboflow } from "roboflow";
 
 export const useVisionModel = () => {
   const [model, setModel] = useState(null);
@@ -7,15 +6,20 @@ export const useVisionModel = () => {
 
   useEffect(() => {
     const load = async () => {
-      // 1. Authenticate with your VITE_ prefixed key
-      const rf = roboflow(import.meta.env.VITE_ROBOFLOW_API_KEY); 
-      
+      // Use the window.roboflow object provided by the CDN script
+      if (!window.roboflow) {
+        console.error("Roboflow SDK not loaded from CDN");
+        return;
+      }
+
       try {
-        // 2. Load the specific dataset from your screenshot
+        const rf = window.roboflow(import.meta.env.VITE_ROBOFLOW_API_KEY);
+        
+        // Using the exact IDs from your Roboflow screenshot
         const instance = await rf
-          .workspace("wei-tq4ff") 
-          .project("grocery-detection-vud86") 
-          .version(1); // Check the 'Deploy' tab in Roboflow for version updates
+          .workspace("wei-tq4ff")
+          .project("grocery-detection-vud86")
+          .version(1);
         
         setModel(instance);
         setIsReady(true);
@@ -23,7 +27,10 @@ export const useVisionModel = () => {
         console.error("Failed to load Grocery model:", error);
       }
     };
-    load();
+
+    // Small delay to ensure the CDN script is parsed
+    const timer = setTimeout(load, 500);
+    return () => clearTimeout(timer);
   }, []);
 
   return { model, isReady };
