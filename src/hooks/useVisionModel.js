@@ -5,31 +5,46 @@ export const useVisionModel = () => {
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      // Use the window.roboflow object provided by the CDN script
-      if (!window.roboflow) {
-        console.error("Roboflow SDK not loaded from CDN");
-        return;
-      }
+    const initRoboflow = async () => {
+      if (!window.roboflow) return;
 
       try {
-        const rf = window.roboflow(import.meta.env.VITE_ROBOFLOW_API_KEY);
+        const apiKey = import.meta.env.VITE_ROBOFLOW_API_KEY;
         
-        // Using the exact IDs from your Roboflow screenshot
-        const instance = await rf
-          .workspace("wei-tq4ff")
-          .project("grocery-detection-vud86")
-          .version(1);
-        
+        if (!apiKey || apiKey.includes("YOUR_")) {
+           console.error("Missing valid API Key in .env");
+           return;
+        }
+
+        // 1. Authenticate
+        const rf = await window.roboflow.auth({
+          publishable_key: apiKey
+        });
+
+        // 2. Load the trained model (Version 3)
+        const instance = await rf.load({
+          model: "grocery-detection-vud86-qal03",
+          version: 3
+        });
+
+        // ⚡ NEW: Warm-up Logic
+        // This forces the GPU to compile shaders now so the first real scan is instant.
+        console.log("Warming up GPU engine...");
+        const dummyCanvas = document.createElement('canvas');
+        dummyCanvas.width = 640;
+        dummyCanvas.height = 640;
+        await instance.detect(dummyCanvas); 
+
+        // 3. Finalize
         setModel(instance);
         setIsReady(true);
+        console.log("✅ AI Model Ready and Warmed Up");
       } catch (error) {
-        console.error("Failed to load Grocery model:", error);
+        console.error("AI Load Failure:", error);
       }
     };
 
-    // Small delay to ensure the CDN script is parsed
-    const timer = setTimeout(load, 500);
+    const timer = setTimeout(initRoboflow, 1000); 
     return () => clearTimeout(timer);
   }, []);
 
