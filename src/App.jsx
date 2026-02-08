@@ -11,15 +11,12 @@ function App() {
   const videoRef = useRef(null);
   const trackerRef = useRef({});
 
-  // --- 🛑 NEW: ROBUST STOP FUNCTION ---
+  // --- 🛑 ROBUST STOP FUNCTION ---
   const stopCamera = () => {
-    // 1. Close the UI state first
     setIsScannerOpen(false);
-
-    // 2. Physically stop the camera stream immediately
     if (videoRef.current && videoRef.current.srcObject) {
       const tracks = videoRef.current.srcObject.getTracks();
-      tracks.forEach(track => track.stop()); // Stops the hardware light
+      tracks.forEach(track => track.stop());
       videoRef.current.srcObject = null;
     }
   };
@@ -31,12 +28,11 @@ function App() {
 
     const startCamera = async () => {
       try {
-        // Mobile-optimized constraints
         stream = await navigator.mediaDevices.getUserMedia({
           video: { 
             facingMode: "environment", 
-            width: { ideal: 720 }, // 720p is plenty for AI & runs cooler
-            aspectRatio: { ideal: 1 } // Square aspect ratio often helps alignment
+            width: { ideal: 720 },
+            aspectRatio: { ideal: 1 } 
           }
         });
         if (videoRef.current) videoRef.current.srcObject = stream;
@@ -47,7 +43,6 @@ function App() {
     };
     startCamera();
 
-    // Cleanup: This ensures camera turns off if user hits "Back" or closes tab
     return () => {
       if (stream) stream.getTracks().forEach(t => t.stop());
     };
@@ -62,20 +57,25 @@ function App() {
       if (videoRef.current && videoRef.current.readyState === 4) {
         try {
           const predictions = await model.detect(videoRef.current);
+          
+          // 🔍 DEBUG: Log raw predictions to see if ANYTHING is detected
+          if (predictions.length > 0) {
+            console.log("Raw Predictions:", predictions);
+          }
+
           const now = Date.now();
           const currentFrameClasses = new Set();
 
-          // Persistence Logic
-          const tracked = predictions.filter(p => p.confidence > 0.6).map(pred => {
+          // 👇 CHANGE: Lower confidence from 0.6 to 0.25 to catch more items
+          const tracked = predictions.filter(p => p.confidence > 0.25).map(pred => {
             const cls = pred.class;
             currentFrameClasses.add(cls);
 
             if (!trackerRef.current[cls]) trackerRef.current[cls] = now;
             
             const duration = now - trackerRef.current[cls];
-            if (duration > 1500) { // Reduced to 1.5s for faster feedback
+            if (duration > 1500) { 
               setHistory(prev => {
-                // Prevent duplicate entries for the same item within 5 seconds
                 if (prev[0]?.class === cls && (now - prev[0].addedAt < 5000)) return prev;
                 return [{ ...pred, id: now, addedAt: now }, ...prev];
               });
@@ -118,7 +118,6 @@ function App() {
               </p>
             </div>
             
-            {/* Header Status Indicator */}
             <div className={`px-3 py-1 rounded-full text-xs font-bold border ${isReady ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
               {isReady ? "SYSTEM ONLINE" : "INITIALIZING..."}
             </div>
@@ -126,7 +125,6 @@ function App() {
 
           <div className="aspect-[4/3] bg-slate-900 rounded-3xl border border-slate-800 relative overflow-hidden shadow-2xl">
             {!isScannerOpen ? (
-              // --- DEFAULT SCREEN (Launch Scanner) ---
               <div className="flex flex-col items-center justify-center h-full space-y-6 animate-in fade-in duration-500">
                  <div className="relative">
                    <div className="absolute inset-0 bg-green-500 blur-2xl opacity-20"></div>
@@ -149,12 +147,10 @@ function App() {
                  </button>
               </div>
             ) : (
-              // --- CAMERA ACTIVE SCREEN ---
               <div className="relative h-full w-full">
                 <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
                 <DetectionOverlay videoRef={videoRef} detections={currentDetections} />
                 
-                {/* 🛑 STOP BUTTON (Floating Overlay) */}
                 <div className="absolute bottom-6 left-0 right-0 flex justify-center z-50">
                   <button 
                     onClick={stopCamera}
@@ -176,6 +172,13 @@ function App() {
            <InventoryList items={history} onClear={() => setHistory([])} />
         </div>
       </div>
+      
+      {/* 🛑 DEBUG PANEL: Remove this once scanning works perfectly */}
+      <div className="fixed bottom-0 left-0 w-full bg-black/80 text-green-400 p-2 text-[10px] font-mono h-24 overflow-y-auto pointer-events-none z-50 opacity-80">
+        DEBUG LOG (Live Detections):
+        <pre>{JSON.stringify(currentDetections, null, 2)}</pre>
+      </div>
+
     </div>
   );
 }
