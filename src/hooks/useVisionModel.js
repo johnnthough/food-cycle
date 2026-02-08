@@ -10,41 +10,33 @@ export const useVisionModel = () => {
 
       try {
         const apiKey = import.meta.env.VITE_ROBOFLOW_API_KEY;
-        
-        if (!apiKey || apiKey.includes("YOUR_")) {
-           console.error("Missing valid API Key in .env");
-           return;
-        }
+        if (!apiKey) return;
 
-        // 1. Authenticate
         const rf = await window.roboflow.auth({
           publishable_key: apiKey
         });
 
-        // 2. Load the trained model (Version 3)
+        // UPDATE: Load Version 5
         const instance = await rf.load({
           model: "grocery-detection-vud86-qal03",
-          version: 3
+          version: 5 // <--- CHANGE THIS TO 5
         });
 
-        // ⚡ NEW: Warm-up Logic
-        // This forces the GPU to compile shaders now so the first real scan is instant.
-        console.log("Warming up GPU engine...");
-        const dummyCanvas = document.createElement('canvas');
-        dummyCanvas.width = 640;
-        dummyCanvas.height = 640;
-        await instance.detect(dummyCanvas); 
+        // Warm-up (384x384 is still the best size for speed)
+        const dummy = document.createElement('canvas');
+        dummy.width = 384; 
+        dummy.height = 384;
+        await instance.detect(dummy);
 
-        // 3. Finalize
         setModel(instance);
         setIsReady(true);
-        console.log("✅ AI Model Ready and Warmed Up");
+        console.log("✅ Version 5 Model Loaded");
       } catch (error) {
         console.error("AI Load Failure:", error);
       }
     };
 
-    const timer = setTimeout(initRoboflow, 1000); 
+    const timer = setTimeout(initRoboflow, 1000);
     return () => clearTimeout(timer);
   }, []);
 
