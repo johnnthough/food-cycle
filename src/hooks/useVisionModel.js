@@ -16,13 +16,13 @@ export const useVisionModel = () => {
           publishable_key: apiKey
         });
 
-        // UPDATE: Load Version 5
+        // 🚀 UPDATE: Load Version 7 (The "Fit/Letterbox" Model)
         const instance = await rf.load({
           model: "grocery-detection-vud86-qal03",
-          version: 5 // <--- CHANGE THIS TO 5
+          version: 6 
         });
 
-        // Warm-up (384x384 is still the best size for speed)
+        // Warm-up (384x384)
         const dummy = document.createElement('canvas');
         dummy.width = 384; 
         dummy.height = 384;
@@ -30,7 +30,7 @@ export const useVisionModel = () => {
 
         setModel(instance);
         setIsReady(true);
-        console.log("✅ Version 5 Model Loaded");
+        console.log("✅ Version 7 Model Loaded (Fit/Letterbox)");
       } catch (error) {
         console.error("AI Load Failure:", error);
       }
